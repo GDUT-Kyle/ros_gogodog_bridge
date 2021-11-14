@@ -1,0 +1,10 @@
+<launch>
+  <node name="dog_driver_node" pkg="ros_gogodog_bridge" type="dog_driver_node" output="screen" >
+    <param name="dog_device" value="/dev/ttyS4" />
+    <param name="baud" value="9600" type="int" />
+    <param name="framerate" value="500" type="int" />
+    <param name="isVerif" value="false" type="bool" />
+  </node>
+  <!-- <node name="rviz" pkg="rviz" type="rviz" args="-d $(find ros_gogodog_bridge)/config/test.rviz" /> -->
+  <node pkg="tf" type="static_transform_publisher" name="dog_base_to_scan" args="0 0 0 0 0 0  dog_base laser   100" />
+</launch>
