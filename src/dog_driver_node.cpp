@@ -63,8 +63,19 @@ void DogDriverNode::checkPort()
 {
 	// mtx.lock();
 	std::string readData;
-	serialPort.Read(readData);
-	// serialPort.ReadLine(readData);
+	// serialPort.Read(readData);
+	serialPort.ReadLine(readData);
+	// unsigned char chardata = 0;
+	// try
+    // {
+    //     // Read a single byte of data from the serial ports.
+    //     serialPort.ReadByte(chardata, 25) ;
+    // }
+    // catch (const std::system_error&)
+    // {
+    //     std::cerr << "Read was unsuccessful." << std::endl ;
+    // }
+	// if(chardata) std::cout<<chardata<<std::endl;
 	if(readData.empty()) return;
 	std::vector<std::string> vecData;
 	ROS_INFO("Read data from serial :\n %s", readData.c_str());
