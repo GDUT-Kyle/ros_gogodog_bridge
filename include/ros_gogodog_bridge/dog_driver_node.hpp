@@ -9,6 +9,7 @@
 #include <string>
 #include <mutex>
 #include <tf/transform_broadcaster.h>
+#include <serial/serial.h>
 #include "Eigen/Core"
 #include "Eigen/Dense"
 #include "Eigen/Geometry"
@@ -35,6 +36,8 @@ protected:
     int baud_;
     int framerate_;
     bool isVerif_;
+
+    serial::Serial my_serial;
 
     std::mutex mtx;
 

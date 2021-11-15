@@ -35,10 +35,24 @@ DogDriverNode::~DogDriverNode()
 
 void DogDriverNode::connect()
 {
-	serialPort.SetDevice(dog_device_);
-	serialPort.SetBaudRate((unsigned int)baud_);
-	serialPort.SetTimeout(0.1);
-	serialPort.Open();
+	// serialPort.SetDevice(dog_device_);
+	// serialPort.SetBaudRate((unsigned int)baud_);
+	// serialPort.SetTimeout(0.1);
+	// serialPort.Open();
+
+	try
+  	{
+		my_serial.setPort(dog_device_);
+		my_serial.setBaudrate(baud_);
+		serial::Timeout to = serial::Timeout::simpleTimeout(1000);
+		my_serial.setTimeout(to);
+		my_serial.open();
+	}
+	catch (serial::IOException& e)
+	{
+		ROS_ERROR("Unable to open port %s", dog_device_.c_str());
+		ROS_ERROR("%s", e.what());
+	}
 
 	setVelocity(0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
 	lastMovingTime = ros::Time::now().toSec();
@@ -51,7 +65,11 @@ void DogDriverNode::connect()
 void DogDriverNode::disconnect()
 {
 	stop();
-	serialPort.Close();
+	// serialPort.Close();
+
+	my_serial.close();
+	ROS_ERROR("%s error %d, %s", "close", errno, strerror(errno));
+	exit(EXIT_FAILURE);
 }
 
 void DogDriverNode::stop()
@@ -63,7 +81,8 @@ void DogDriverNode::checkPort()
 {
 	// mtx.lock();
 	std::string readData;
-	serialPort.Read(readData);
+	// serialPort.Read(readData);
+	my_serial.readline(readData, (size_t)127, "\r\n");
 	if(readData.empty()) return;
 	std::vector<std::string> vecData;
 	ROS_INFO("Read data from serial :\n %s", readData.c_str());
@@ -191,7 +210,8 @@ void DogDriverNode::setVelocity(double vX, double vY, double vZ, double vYaw, do
 		outputCmd += to_string_with_high_precision(outputSpeed[i], 3);
 	}
 	outputCmd += std::string("\r\n");
-	serialPort.Write((outputCmd).c_str());
+	// serialPort.Write((outputCmd).c_str());
+	my_serial.write(outputCmd);
 	ROS_DEBUG("Set velocity : (%s)", outputCmd.c_str());
 }
 
