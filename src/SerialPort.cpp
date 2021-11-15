@@ -24,6 +24,7 @@
 #include <asm/termbits.h>
 
 #include<chrono>
+#include <errno.h>
 
 // User includes
 #include "CppLinuxSerial/Exception.hpp"
@@ -434,63 +435,72 @@ namespace CppLinuxSerial {
 		// If code reaches here, read must of been successful
 	}
 
-	ssize_t SerialPort::readch(int fd, char *ptr)
+	ssize_t SerialPort::ReadByte(unsigned char& charBuffer, const size_t msTimeout)
 	{
-		static int          count = 0;
-		static char*        read_ptr = 0;
-		static char         read_buf[1024*4] = {0};
-
-		if (count <= 0)
-		{
-		again:
-			count = read(fd, read_buf, sizeof(read_buf));
-			if (-1 == count)
-				if (EINTR == errno)
-					goto again;
-				else
-					return -1;
-			else if (0 == count)
-				return 0;
-			read_ptr = read_buf;
+		if(fileDesc_ == 0) {
+			//this->sp->PrintError(SmartPrint::Ss() << "Read() was called but file descriptor (fileDesc) was 0, indicating file has not been opened.");
+			//return false;
+			THROW_EXCEPT("Read() was called but file descriptor (fileDesc) was 0, indicating file has not been opened.");
 		}
-		count--;
-		*ptr = *read_ptr++;
-		return 1;
+
+		// Obtain the entry time.
+        const auto entry_time = std::chrono::high_resolution_clock::now().time_since_epoch();
+
+		// Loop until the number of bytes requested have been read or the
+        // timeout has elapsed.
+        ssize_t read_result = 0 ;
+		while (read_result < 1)
+        {
+			// read_result = call_with_retry(read,
+            //                               this->fileDesc_,
+            //                               &charBuffer,
+            //                               sizeof(unsigned char));
+			read_result = read(fileDesc_, &charBuffer, sizeof(unsigned char));
+
+			// If the byte has been successfully read, exit the loop and return.
+            if (read_result == sizeof(unsigned char))
+            {
+                return read_result;
+            }
+
+            if (read_result < 0)
+            {
+                // Read was unsuccessful
+				// Read was unsuccessful
+				// throw std::system_error(EFAULT, std::system_category());
+				// throw std::runtime_error(strerror(errno)) ;
+				return read_result;
+            }
+
+            // Obtain the current time.
+            const auto current_time = std::chrono::high_resolution_clock::now().time_since_epoch() ;
+
+            // Calculate the time delta.
+            const auto elapsed_time = current_time - entry_time ;
+
+            // Calculate the elapsed number of milliseconds.
+            const auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(elapsed_time).count() ;
+
+            // Throw a ReadTimeout exception if more than msTimeout milliseconds
+            // have elapsed while waiting for data.
+            if ((msTimeout > 0) &&
+                (static_cast<size_t>(elapsed_ms) > msTimeout))
+            {
+                // throw ReadTimeout("Read timeout, line 485 in src/ros_gogodog_bridge/src/SerialPort.cpp") ;
+				return read_result;
+            }
+
+            // Allow sufficient time for an additional byte to arrive.
+            usleep(1) ;
+		}
 	}
 
-	ssize_t SerialPort::readline(int fd, void *vptr, size_t maxlen)
+	void SerialPort::ReadLine(std::string& dataString, 
+                            const char   lineTerminator,
+                            const size_t msTimeout)
 	{
-		ssize_t         i = 0;
-		ssize_t         ret = 0;
-		char            ch = '\0';
-		char*           ptr = NULL;
-
-		ptr = (char *)vptr;
-
-		for (i = 1; i < maxlen; ++i)
-		{
-			ret = readch(fd, &ch);
-			if (1 == ret)
-			{
-				*ptr++ = ch;
-				if ('\n' == ch)
-					break;
-			}
-			else if (0 == ret)
-			{
-				*ptr = 0;
-				return i-1;
-			}
-			else
-				return -1;
-		}
-		*ptr = 0;
-		return i;
-	}
-
-	void SerialPort::ReadLine(std::string& data)
-	{
-        data.clear();
+		// Clear the data string.
+        dataString.clear() ;
 
 		if(fileDesc_ == 0) {
 			//this->sp->PrintError(SmartPrint::Ss() << "Read() was called but file descriptor (fileDesc) was 0, indicating file has not been opened.");
@@ -498,25 +508,129 @@ namespace CppLinuxSerial {
 			THROW_EXCEPT("Read() was called but file descriptor (fileDesc) was 0, indicating file has not been opened.");
 		}
 
-		ssize_t n = readline(fileDesc_, &readBuffer_[0], readBufferSize_B_);
+        unsigned char next_char = 0 ;
 
-		// Error Handling
-		if(n < 0) {
-			// Read was unsuccessful
-			throw std::system_error(EFAULT, std::system_category());
-		}
+        size_t elapsed_ms = 0 ;
 
-		if(n > 0) {
+        ssize_t remaining_ms = 0 ;
 
-//			buf[n] = '\0';
-			//printf("%s\r\n", buf);
-//			data.append(buf);
-            data = std::string(&readBuffer_[0], n);
-			//std::cout << *str << " and size of string =" << str->size() << "\r\n";
-		}
+        std::chrono::high_resolution_clock::duration entry_time ;
+        std::chrono::high_resolution_clock::duration current_time ;
+        std::chrono::high_resolution_clock::duration elapsed_time ;
 
-		// If code reaches here, read must of been successful
+        // Obtain the entry time.
+        entry_time = std::chrono::high_resolution_clock::now().time_since_epoch() ;
+
+        while (next_char != lineTerminator)
+        {
+            // Obtain the current time.
+            current_time = std::chrono::high_resolution_clock::now().time_since_epoch() ;
+
+            // Calculate the time delta.
+            elapsed_time = current_time - entry_time ;
+
+            // Calculate the elapsed number of milliseconds.
+            elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(elapsed_time).count() ;
+
+            // If more than msTimeout milliseconds have elapsed while
+            // waiting for data, then we throw a ReadTimeout exception.
+            if (msTimeout > 0 &&
+                elapsed_ms > msTimeout)
+            {
+                // throw ReadTimeout("Read timeout, line 535 in src/ros_gogodog_bridge/src/SerialPort.cpp") ;
+				break;
+            }
+
+            remaining_ms = msTimeout - elapsed_ms ;
+
+			if(this->ReadByte(next_char, remaining_ms) != 1) return;
+            dataString += next_char ;
+        }
 	}
+
+	// ssize_t SerialPort::readch(int fd, char *ptr)
+	// {
+	// 	static int          count = 0;
+	// 	static char*        read_ptr = 0;
+	// 	static char         read_buf[1024*4] = {0};
+
+	// 	if (count <= 0)
+	// 	{
+	// 	again:
+	// 		count = read(fd, read_buf, sizeof(read_buf));
+	// 		if (-1 == count)
+	// 			if (EINTR == errno)
+	// 				goto again;
+	// 			else
+	// 				return -1;
+	// 		else if (0 == count)
+	// 			return 0;
+	// 		read_ptr = read_buf;
+	// 	}
+	// 	count--;
+	// 	*ptr = *read_ptr++;
+	// 	return 1;
+	// }
+
+	// ssize_t SerialPort::readline(int fd, void *vptr, size_t maxlen)
+	// {
+	// 	ssize_t         i = 0;
+	// 	ssize_t         ret = 0;
+	// 	char            ch = '\0';
+	// 	char*           ptr = NULL;
+
+	// 	ptr = (char *)vptr;
+
+	// 	for (i = 1; i < maxlen; ++i)
+	// 	{
+	// 		ret = readch(fd, &ch);
+	// 		if (1 == ret)
+	// 		{
+	// 			*ptr++ = ch;
+	// 			if ('\n' == ch)
+	// 				break;
+	// 		}
+	// 		else if (0 == ret)
+	// 		{
+	// 			*ptr = 0;
+	// 			return i-1;
+	// 		}
+	// 		else
+	// 			return -1;
+	// 	}
+	// 	*ptr = 0;
+	// 	return i;
+	// }
+
+// 	void SerialPort::ReadLine(std::string& data)
+// 	{
+//         data.clear();
+
+// 		if(fileDesc_ == 0) {
+// 			//this->sp->PrintError(SmartPrint::Ss() << "Read() was called but file descriptor (fileDesc) was 0, indicating file has not been opened.");
+// 			//return false;
+// 			THROW_EXCEPT("Read() was called but file descriptor (fileDesc) was 0, indicating file has not been opened.");
+// 		}
+
+// 		ssize_t n = readline(fileDesc_, &readBuffer_[0], readBufferSize_B_);
+
+// 		// Error Handling
+// 		if(n < 0) {
+// 			// Read was unsuccessful
+// 			throw std::system_error(EFAULT, std::system_category());
+// 		}
+
+// 		if(n > 0) {
+
+// //			buf[n] = '\0';
+// 			//printf("%s\r\n", buf);
+// //			data.append(buf);
+//             data = std::string(&readBuffer_[0], n);
+// 			//std::cout << *str << " and size of string =" << str->size() << "\r\n";
+// 		}
+
+// 		// If code reaches here, read must of been successful
+// 	}
 
 	// termios SerialPort::GetTermios() {
     //     if(fileDesc_ == -1)
