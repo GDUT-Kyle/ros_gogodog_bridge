@@ -538,7 +538,7 @@ namespace CppLinuxSerial {
                 elapsed_ms > msTimeout)
             {
                 // throw ReadTimeout("Read timeout, line 535 in src/ros_gogodog_bridge/src/SerialPort.cpp") ;
-				break;
+				return;
             }
 
             remaining_ms = msTimeout - elapsed_ms ;
