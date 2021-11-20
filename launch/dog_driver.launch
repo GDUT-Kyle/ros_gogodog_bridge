@@ -1,6 +1,6 @@
 <launch>
   <node name="dog_driver_node" pkg="ros_gogodog_bridge" type="dog_driver_node" output="screen" >
-    <param name="dog_device" value="/dev/ttyUSB0" />
+    <param name="dog_device" value="/dev/ttyS0" />
     <param name="baud" value="9600" type="int" />
     <param name="framerate" value="500" type="int" />
     <param name="isVerif" value="false" type="bool" />

@@ -151,9 +151,13 @@ void DogDriverNode::parseOdometry()
 	Eigen::AngleAxisd dYaw(dMotion(3,0),Eigen::Vector3d(0, 0, 1));
 	Eigen::AngleAxisd dPitch(dMotion(4,0),Eigen::Vector3d(0, 1, 0));
 	Eigen::AngleAxisd dRoll(dMotion(5,0),Eigen::Vector3d(1, 0, 0));
-	Eigen::Quaterniond dPose = dYaw * dPitch * dRoll;
+	// Eigen::Quaterniond dPose = dYaw * dPitch * dRoll;
+	Eigen::Quaterniond dPose = dYaw *
+								Eigen::AngleAxisd(0.0,Eigen::Vector3d(0, 1, 0)) *
+								Eigen::AngleAxisd(0.0,Eigen::Vector3d(1, 0, 0));
 
 	Eigen::Vector3d dPosition = dMotion.block(0, 0, 3, 1);
+	dPosition.z() = 0.0;
 
 	curPose = curPose * dPose;
 	curPosition += curPose * dPosition;
