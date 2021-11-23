@@ -30,6 +30,6 @@ include_directories(
   include
 )
 
-add_executable(dog_driver_node src/dog_driver_node.cpp src/util.cpp src/SerialPort.cpp)
+add_executable(dog_driver_node src/dog_driver_node.cpp src/util.cpp)
 target_link_libraries(dog_driver_node ${catkin_LIBRARIES})
 

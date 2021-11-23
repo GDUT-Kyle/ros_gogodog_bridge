@@ -1,8 +1,6 @@
-#include "CppLinuxSerial/SerialPort.hpp"
 #include "ros_gogodog_bridge/dog_driver_node.hpp"
 #include "ros_gogodog_bridge/util.h"
 
-using namespace mn::CppLinuxSerial;
 using namespace dog_driver;
 
 DogDriverNode::DogDriverNode() : n_("~")

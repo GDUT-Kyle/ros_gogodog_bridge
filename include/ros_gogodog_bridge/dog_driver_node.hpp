@@ -13,9 +13,6 @@
 #include "Eigen/Core"
 #include "Eigen/Dense"
 #include "Eigen/Geometry"
-#include "CppLinuxSerial/SerialPort.hpp"
-
-using namespace mn::CppLinuxSerial;
 
 namespace dog_driver
 {
@@ -31,7 +28,6 @@ protected:
     ros::Subscriber sub_vel;
     ros::Subscriber sub_reset;
 
-    SerialPort serialPort;
     std::string dog_device_;
     int baud_;
     int framerate_;
