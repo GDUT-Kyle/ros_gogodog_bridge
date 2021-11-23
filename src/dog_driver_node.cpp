@@ -142,11 +142,15 @@ void DogDriverNode::parseOdometry()
 
 	curTime = ros::Time::now().toSec();
 	dt = curTime - lastTime;
+	lastTime = curTime;
 	// 中值积分
 	for(size_t i=0; i<recVelocity.size(); i++)
 	{
 		dMotion(i, 0) = 0.5*(lastRecVelocity[i]+recVelocity[i])*dt;
 	}
+	// for(size_t i=0; i<recVelocity.size(); i++)
+	// 		lastRecVelocity[i] = recVelocity[i];
+	lastRecVelocity.assign(recVelocity.begin(), recVelocity.end());
 
 	Eigen::AngleAxisd dYaw(dMotion(3,0),Eigen::Vector3d(0, 0, 1));
 	Eigen::AngleAxisd dPitch(dMotion(4,0),Eigen::Vector3d(0, 1, 0));
@@ -167,8 +171,6 @@ void DogDriverNode::parseOdometry()
 
 	PublishOdometryToROS();
 	PublishTF();
-
-	lastTime = curTime;
 }
 
 void DogDriverNode::PublishOdometryToROS()
