@@ -16,7 +16,7 @@ DogDriverNode::DogDriverNode() : n_("~")
 	curPosition.setZero();
 	curPose.setIdentity();
 
-	pub_odom = n_.advertise<nav_msgs::Odometry>("/dog/odometry", 5);
+	pub_odom = n_.advertise<nav_msgs::Odometry>("/odom", 5);
 	// sub_vel = n_.subscribe<geometry_msgs::Twist>("/cmd_vel", 5, &DogDriverNode::cmdVelHandler, this);
 	sub_vel = 
 			n_.subscribe<geometry_msgs::Twist>("/cmd_vel", 5, boost::bind(&DogDriverNode::cmdVelHandler, this, _1));
@@ -83,8 +83,8 @@ void DogDriverNode::checkPort()
 	my_serial.readline(readData, (size_t)127, "\r\n");
 	if(readData.empty()) return;
 	std::vector<std::string> vecData;
-	ROS_INFO("Read data from serial :\n %s", readData.c_str());
-	ROS_INFO("The data has [%d] byte", readData.size());
+	// ROS_INFO("Read data from serial :\n %s", readData.c_str());
+	// ROS_INFO("The data has [%d] byte", readData.size());
 	split(readData, vecData, ' ');
 	if(vecData[0] == READ_VEL)
 	{
@@ -108,7 +108,7 @@ void DogDriverNode::checkPort()
 			}
 		}
 		parseOdometry();
-		ROS_INFO("Receive velocity value: (%f, %f, %f, %f, %f, %f)", recVelocity[0], recVelocity[1], recVelocity[2], recVelocity[3],recVelocity[4],recVelocity[5]);
+		// ROS_INFO("Receive velocity value: (%f, %f, %f, %f, %f, %f)", recVelocity[0], recVelocity[1], recVelocity[2], recVelocity[3],recVelocity[4],recVelocity[5]);
 	}
 	else
 	{
@@ -158,7 +158,7 @@ void DogDriverNode::parseOdometry()
 								Eigen::AngleAxisd(0.0,Eigen::Vector3d(0, 1, 0)) *
 								Eigen::AngleAxisd(0.0,Eigen::Vector3d(1, 0, 0));
 
-	Eigen::Vector3d dPosition = dMotion.block(0, 0, 3, 1);
+	Eigen::Vector3d dPosition = 1.3 * dMotion.block(0, 0, 3, 1);
 	dPosition.z() = 0.0;
 
 	curPose = curPose * dPose;
